@@ -330,7 +330,42 @@ void screen_repaint(void) {
 #else // DEBUG_SEGMENTS
   // display screen segments
   screen_flag(FLAG_TANKANDPANEL);
-  screen_flag(FLAG_CELSIUS);
+  G_state.blink_flags &= ~ ((1<<FLAG_TEMPPANEL)|(1<<FLAG_TEMPTOP)|(1<<FLAG_TEMPBOT)|(1<<FLAG_WARNING));
+  if (G_state.temps[TEMP_PANEL] == TEMP_UNDEF
+    || G_state.temps[TEMP_BOTTOM] == TEMP_UNDEF) {
+    G_state.blink_flags |= (1<<FLAG_WARNING);
+  }
+  if (G_state.temps[TEMP_PANEL] < 0) {
+    screen_flag(FLAG_FROST);
+  }
+  switch(temp_idx) {
+    case TEMP_PANEL:
+      G_state.blink_flags |= (1<<FLAG_TEMPPANEL);
+      screen_flag(FLAG_CELSIUS);
+      break;
+    case TEMP_TOP:
+      G_state.blink_flags |= (1<<FLAG_TEMPTOP);
+      screen_flag(FLAG_CELSIUS);
+      break;
+    case TEMP_BOTTOM:
+      G_state.blink_flags |= (1<<FLAG_TEMPBOT);
+      screen_flag(FLAG_CELSIUS);
+      break;
+    case TEMP_DELTASTART:
+    case TEMP_DELTASTOP:
+      screen_flag(FLAG_TEMPPANEL);
+      screen_flag(FLAG_TEMPBOT);
+      screen_flag(FLAG_CELSIUS);
+      break;
+    case TEMP_MAX:
+      screen_flag(FLAG_TEMPBOT);
+      screen_flag(FLAG_CELSIUS);
+      break;
+    case TEMP_MIN:
+      screen_flag(FLAG_TEMPBOT);
+      screen_flag(FLAG_CELSIUS);
+      break;
+  }
   if (temp_idx <= TEMP_COUNT - 1) {
     screen_string(U_display_titles[temp_idx]);
     screen_number1decimal(G_state.temps[temp_idx]);
