@@ -144,7 +144,8 @@ uint32_t ts_expired(uint32_t target_ts) {
 
 void pump(uint8_t state) {
   G_state.pump_state = state;
-  gpio_out(PUMP_PORT, PUMP_PIN, state);
+  // the drive is inverted on the line
+  gpio_out(PUMP_PORT, PUMP_PIN, !state);
   if (G_state.pump_state) {
     G_state.blink_flags |= 1<<FLAG_PUMP;
   }
