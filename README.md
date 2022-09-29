@@ -7,7 +7,7 @@ A open source rework of the MCU firmware for a Resol Diemasol A1.
 
 After changing the gas boiler, I kept the solar thermal panel and adapted it onto the hot water tank of the new boiler. However, I lost the ability to configure the parameters of the Diemasol A1 solar controller built by Resol.
 
-From there, there was two choices:
+From there, there were two choices:
 
  * the soft way: reverse the IO protocol to configure the controller (VBus or ModBus)
  * the hard way: rewrite an open source code for the controller, and use the UX to allow for reconfiguration.
