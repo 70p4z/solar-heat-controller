@@ -110,7 +110,7 @@ void debug_uart(uint8_t b) {
 
 uint32_t get_ts(void) {
   uint32_t v = T0TC * 10UL;
-  return (v / (147456UL / 4UL)); // time is returned within a 65536 seconds window
+  return (v / (147456UL / 4UL));
 }
 #define MAX_TS ((0xFFFFFFFFUL*10UL)/(147456UL / 4UL))
 
@@ -362,7 +362,7 @@ void screen_repaint(void) {
       screen_flag(FLAG_CELSIUS);
       break;
     case TEMP_MIN:
-      screen_flag(FLAG_TEMPBOT);
+      screen_flag(FLAG_TEMPPANEL);
       screen_flag(FLAG_CELSIUS);
       break;
   }
@@ -388,18 +388,18 @@ void screen_repaint(void) {
   screen_update();
 }
 
-////////////////////////////////////////////////////////////////////////////////*/
-///                                                                             */
-///     ▄▄▄▄▄▄▄▄            ▄▄▄▄▄▄    ▄▄▄▄▄▄      ▄▄▄▄    ▄▄▄▄▄▄    ▄▄▄▄▄▄▄▄    */
-///     ▀▀▀██▀▀▀            ██▀▀▀▀█▄  ██▀▀▀▀██   ██▀▀██   ██▀▀▀▀██  ██▀▀▀▀▀▀    */
-///        ██               ██    ██  ██    ██  ██    ██  ██    ██  ██          */
-///        ██               ██████▀   ███████   ██    ██  ███████   ███████     */
-///        ██               ██        ██  ▀██▄  ██    ██  ██    ██  ██          */
-///        ██               ██        ██    ██   ██▄▄██   ██▄▄▄▄██  ██▄▄▄▄▄▄    */
-///        ▀▀               ▀▀        ▀▀    ▀▀▀   ▀▀▀▀    ▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀    */
-///                                                                             */
-///                                                                             */
-////////////////////////////////////////////////////////////////////////////////*/
+//////////////////////////////////////////////////////////////////////////////////////////*/
+///                                                                                       */
+///     ▄▄▄▄▄▄▄▄    ▄▄▄               ▄▄▄▄▄▄    ▄▄▄▄▄▄      ▄▄▄▄    ▄▄▄▄▄▄    ▄▄▄▄▄▄▄▄    */
+///     ▀▀▀██▀▀▀   █   █              ██▀▀▀▀█▄  ██▀▀▀▀██   ██▀▀██   ██▀▀▀▀██  ██▀▀▀▀▀▀    */
+///        ██      ▀▄▄▄▀              ██    ██  ██    ██  ██    ██  ██    ██  ██          */
+///        ██                         ██████▀   ███████   ██    ██  ███████   ███████     */
+///        ██                         ██        ██  ▀██▄  ██    ██  ██    ██  ██          */
+///        ██                         ██        ██    ██   ██▄▄██   ██▄▄▄▄██  ██▄▄▄▄▄▄    */
+///        ▀▀                         ▀▀        ▀▀    ▀▀▀   ▀▀▀▀    ▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀    */
+///                                                                                       */
+///                                                                                       */
+//////////////////////////////////////////////////////////////////////////////////////////*/
 void temp_set_source(uint8_t src) {
   switch(src) {
     case 0:
@@ -548,6 +548,19 @@ int16_t temp_read(void) {
   return TEMP_UNDEF;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////*/
+///                                                                                                 */
+///     ▄▄▄▄▄▄▄▄    ▄▄▄                  ▄▄        ▄▄▄▄   ▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄     ▄▄▄▄    ▄▄▄   ▄▄    */
+///     ▀▀▀██▀▀▀   █   █                ████     ██▀▀▀▀█  ▀▀▀██▀▀▀   ▀▀██▀▀    ██▀▀██   ███   ██    */
+///        ██      ▀▄▄▄▀                ████    ██▀          ██        ██     ██    ██  ██▀█  ██    */
+///        ██                          ██  ██   ██           ██        ██     ██    ██  ██ ██ ██    */
+///        ██                          ██████   ██▄          ██        ██     ██    ██  ██  █▄██    */
+///        ██                         ▄██  ██▄   ██▄▄▄▄█     ██      ▄▄██▄▄    ██▄▄██   ██   ███    */
+///        ▀▀                         ▀▀    ▀▀     ▀▀▀▀      ▀▀      ▀▀▀▀▀▀     ▀▀▀▀    ▀▀   ▀▀▀    */
+///                                                                                                 */
+///                                                                                                 */
+////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
 void temp_action(void) {
   // invalid temp? safety first, disable and notify
   if (G_state.temps[TEMP_PANEL] == TEMP_UNDEF
@@ -562,14 +575,32 @@ void temp_action(void) {
   else if (G_state.temps[TEMP_BOTTOM] >= G_state.temps[TEMP_MAX]) {
     pump(OFF);
   }
-  // panel - low <= deltastop
-  else if (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] <= G_state.temps[TEMP_DELTASTOP]) {
-    pump(OFF);
-  }
-  // panel - low >= deltastart
-  else if (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] >= G_state.temps[TEMP_DELTASTART]) {
-    pump(ON);
-  }
+  else {
+    // NO tank top temperature
+    if (G_state.temps[TEMP_TOP] == TEMP_UNDEF ) {
+      if (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] <= G_state.temps[TEMP_DELTASTOP]) {
+        pump(OFF);
+      }
+      // panel - bottom >= deltastart
+      else if (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] >= G_state.temps[TEMP_DELTASTART]) {
+        pump(ON);
+      }
+    }
+    // we have a tank top temperature
+    else {
+      // check both, don't assert bottom is < top
+      if (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] <= G_state.temps[TEMP_DELTASTOP]
+        || G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_TOP] <= G_state.temps[TEMP_DELTASTOP]) {
+        pump(OFF);
+      }
+      // panel - bottom >= deltastart
+      // && panel - top >= deltastart
+      else if (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] >= G_state.temps[TEMP_DELTASTART]
+        && G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_TOP] >= G_state.temps[TEMP_DELTASTART]) {
+        pump(ON);
+      }
+    }
+  } 
 
   // if (G_state.temps_change) {
   //   screen_repaint();
@@ -592,8 +623,8 @@ void temp_action(void) {
 void init_state(void) {
   memset(&G_state, 0, sizeof(G_state));
   // temps are in decicelsius
-  G_state.temps[TEMP_DELTASTART] = 100;
-  G_state.temps[TEMP_DELTASTOP] = 40;
+  G_state.temps[TEMP_DELTASTART] = 60;
+  G_state.temps[TEMP_DELTASTOP] = 30;
   G_state.temps[TEMP_MAX] = 700;
   G_state.temps[TEMP_MIN] = 200;
   G_state.temps[TEMP_VERSION] = VERSION;
