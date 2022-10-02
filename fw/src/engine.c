@@ -24,10 +24,10 @@ void init_hw (void) {
   PINSEL0 = 0x0;
   PINSEL1 = 0x0;
   PINSEL2 = 0x4;
-  //             x  x  
-  // 3 12 13 16 28 29
+  //            TDI TCK
+  // 3 12 13 16 28  29
   FIO0SET = 0x30013008;
-  //          x           x        x
+  //          x          RTCint?  TMS
   // 2 10 11 15 17 18 19 21 25 26 30
   FIO0CLR = 0x462E8C04;
   //              x
@@ -112,7 +112,7 @@ uint32_t get_ts(void) {
   uint32_t v = T0TC * 10UL;
   return (v / (147456UL / 4UL));
 }
-#define MAX_TS ((0xFFFFFFFFUL*10UL)/(147456UL / 4UL))
+#define MAX_TS ((0xFFFFFFFFUL*10UL)/(147456UL / 4UL)-1)
 
 uint32_t ts_expired(uint32_t target_ts) {
   uint32_t ts = get_ts();
@@ -212,8 +212,10 @@ void button_action(uint32_t button_idx) {
       }
       else {
         switch(G_state.display_state) {
-          case TEMP_DELTASTART:
-          case TEMP_DELTASTOP:
+          case TEMP_DELTASTARTTOP:
+          case TEMP_DELTASTARTBOT:
+          case TEMP_DELTASTOPTOP:
+          case TEMP_DELTASTOPBOT:
           case TEMP_MAX:
           case TEMP_MIN:
             G_state.display_state |= DISPLAY_FLAG_EDIT;
@@ -310,11 +312,13 @@ Version
 */
 
 char* const U_display_titles[TEMP_COUNT] = {
-  "tPAN",
-  "tTOP",
-  "tBOT",
-  "dGO",
-  "dEND",
+  "Tp",
+  "Th",
+  "Tb",
+  "GOh",
+  "ENDh",
+  "GOb",
+  "ENDb",
   "tMAX",
   "tMIN",
   "VER",
@@ -351,8 +355,22 @@ void screen_repaint(void) {
       G_state.blink_flags |= (1<<FLAG_TEMPBOT);
       screen_flag(FLAG_CELSIUS);
       break;
-    case TEMP_DELTASTART:
-    case TEMP_DELTASTOP:
+    case TEMP_DELTASTARTTOP:
+      screen_flag(FLAG_TEMPPANEL);
+      screen_flag(FLAG_TEMPTOP);
+      screen_flag(FLAG_CELSIUS);
+      break;
+    case TEMP_DELTASTOPTOP:
+      screen_flag(FLAG_TEMPPANEL);
+      screen_flag(FLAG_TEMPTOP);
+      screen_flag(FLAG_CELSIUS);
+      break;
+    case TEMP_DELTASTARTBOT:
+      screen_flag(FLAG_TEMPPANEL);
+      screen_flag(FLAG_TEMPBOT);
+      screen_flag(FLAG_CELSIUS);
+      break;
+    case TEMP_DELTASTOPBOT:
       screen_flag(FLAG_TEMPPANEL);
       screen_flag(FLAG_TEMPBOT);
       screen_flag(FLAG_CELSIUS);
@@ -578,25 +596,25 @@ void temp_action(void) {
   else {
     // NO tank top temperature
     if (G_state.temps[TEMP_TOP] == TEMP_UNDEF ) {
-      if (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] <= G_state.temps[TEMP_DELTASTOP]) {
+      if (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] <= G_state.temps[TEMP_DELTASTOPBOT]) {
         pump(OFF);
       }
       // panel - bottom >= deltastart
-      else if (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] >= G_state.temps[TEMP_DELTASTART]) {
+      else if (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] >= G_state.temps[TEMP_DELTASTARTBOT]) {
         pump(ON);
       }
     }
     // we have a tank top temperature
     else {
       // check both, don't assert bottom is < top
-      if (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] <= G_state.temps[TEMP_DELTASTOP]
-        || G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_TOP] <= G_state.temps[TEMP_DELTASTOP]) {
+      if (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] <= G_state.temps[TEMP_DELTASTOPBOT]
+        || G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_TOP] <= G_state.temps[TEMP_DELTASTOPTOP]) {
         pump(OFF);
       }
       // panel - bottom >= deltastart
       // && panel - top >= deltastart
-      else if (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] >= G_state.temps[TEMP_DELTASTART]
-        && G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_TOP] >= G_state.temps[TEMP_DELTASTART]) {
+      else if (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] >= G_state.temps[TEMP_DELTASTARTBOT]
+        && G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_TOP] >= G_state.temps[TEMP_DELTASTARTTOP]) {
         pump(ON);
       }
     }
@@ -623,8 +641,10 @@ void temp_action(void) {
 void init_state(void) {
   memset(&G_state, 0, sizeof(G_state));
   // temps are in decicelsius
-  G_state.temps[TEMP_DELTASTART] = 60;
-  G_state.temps[TEMP_DELTASTOP] = 30;
+  G_state.temps[TEMP_DELTASTARTBOT] = 100;
+  G_state.temps[TEMP_DELTASTOPBOT] = 30;
+  G_state.temps[TEMP_DELTASTARTTOP] = 20;
+  G_state.temps[TEMP_DELTASTOPTOP] = 00;
   G_state.temps[TEMP_MAX] = 700;
   G_state.temps[TEMP_MIN] = 200;
   G_state.temps[TEMP_VERSION] = VERSION;
