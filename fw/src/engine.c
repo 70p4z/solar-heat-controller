@@ -609,9 +609,13 @@ void temp_action(void) {
     }
     // we have a tank top temperature
     else {
-      // check both, don't assert bottom is < top
-      if (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] <= G_state.temps[TEMP_DELTASTOPBOT]
-        || G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_TOP] <= G_state.temps[TEMP_DELTASTOPTOP]) {
+      if (
+        // tank is upside down?
+        G_state.temps[TEMP_BOTTOM] >= G_state.temps[TEMP_TOP]
+            // deltastop bottom 
+        || (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] <= G_state.temps[TEMP_DELTASTOPBOT]
+            // and delteastop top
+            && G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_TOP] <= G_state.temps[TEMP_DELTASTOPTOP])) {
         pump(OFF);
       }
       // panel - bottom >= deltastart
