@@ -595,7 +595,10 @@ void temp_action(void) {
   }
   else {
     // NO tank top temperature
-    if (G_state.temps[TEMP_TOP] == TEMP_UNDEF ) {
+    if (G_state.temps[TEMP_TOP] == TEMP_UNDEF 
+     // or disabled top temp
+     || G_state.temps[TEMP_DELTASTARTTOP] == 0 
+     || G_state.temps[TEMP_DELTASTOPTOP] == 0) {
       if (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] <= G_state.temps[TEMP_DELTASTOPBOT]) {
         pump(OFF);
       }
@@ -641,10 +644,10 @@ void temp_action(void) {
 void init_state(void) {
   memset(&G_state, 0, sizeof(G_state));
   // temps are in decicelsius
-  G_state.temps[TEMP_DELTASTARTBOT] = 100;
-  G_state.temps[TEMP_DELTASTOPBOT] = 30;
-  G_state.temps[TEMP_DELTASTARTTOP] = 20;
+  G_state.temps[TEMP_DELTASTARTTOP] = 00;
   G_state.temps[TEMP_DELTASTOPTOP] = 00;
+  G_state.temps[TEMP_DELTASTARTBOT] = 80;
+  G_state.temps[TEMP_DELTASTOPBOT] = 30;
   G_state.temps[TEMP_MAX] = 700;
   G_state.temps[TEMP_MIN] = 200;
   G_state.temps[TEMP_VERSION] = VERSION;
