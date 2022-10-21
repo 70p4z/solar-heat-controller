@@ -116,16 +116,6 @@ uint32_t get_ts(void) {
 
 uint32_t ts_expired(uint32_t target_ts) {
   uint32_t ts = get_ts();
-  debug_uart(ts>>24);
-  debug_uart(ts>>16);
-  debug_uart(ts>>8);
-  debug_uart(ts>>0);
-  debug_uart(target_ts>>24);
-  debug_uart(target_ts>>16);
-  debug_uart(target_ts>>8);
-  debug_uart(target_ts>>0);
-  {volatile uint32_t i = 0x100 ; while(i--);}
-  // THIS IS OK, BUT get_ts has a max value :(
   return (ts - target_ts) < 0x80000000UL;
 }
 
