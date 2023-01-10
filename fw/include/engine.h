@@ -9,14 +9,14 @@
 #define OFF 0
 #define ON 1
 
-enum {
+typedef enum {
   BUTTON_UP=0,
   BUTTON_SET,
   BUTTON_DOWN,
   BUTTON_COUNT
 } pins_e;
 
-enum {
+typedef enum {
   TEMP_PANEL,
   TEMP_TOP,
   TEMP_BOTTOM,
@@ -50,6 +50,9 @@ typedef struct {
   uint32_t ts_display; // timeout for next screen animation
   uint8_t ht1621b_ram[(32*4)/8];
 
+  #define TIMEOUT_OUTPUT 1000000
+  uint32_t ts_output_next;
+
   uint8_t pump_state;
 } state_t;
 
@@ -63,7 +66,7 @@ void screen_init(void);
 void screen_update(void);
 void screen_repaint();
 
-enum {
+typedef enum {
   FLAG_HAND=0,
   FLAG_PAUSE,
   FLAG_RUN,

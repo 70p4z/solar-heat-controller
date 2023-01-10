@@ -95,6 +95,20 @@ void debug_uart(uint8_t b) {
   }
 }
 
+void output_uart(uint8_t b) {
+  uint8_t bits=2+8+2;
+  uint32_t _in;
+  FIO0DIR |= (1<<0);
+  //     idle     start               stop      stop
+  _in = (1<<0) | (0<<1) | (b<<2) | (1<<10) | (1<<11); // idle before start + 2 stop bit
+
+  while(bits--) {
+    gpio_out(0, 0, _in&1); 
+    _in>>=1;
+    {volatile uint32_t i = 0x100 ; while(i--);}
+  }
+}
+
 //////////////////////////////////////////////////*/
 ///                                               */
 ///     ▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄   ▄▄▄  ▄▄▄  ▄▄▄▄▄▄▄▄    */
@@ -109,10 +123,13 @@ void debug_uart(uint8_t b) {
 //////////////////////////////////////////////////*/
 
 uint32_t get_ts(void) {
-  uint32_t v = T0TC * 10UL;
-  return (v / (147456UL / 4UL));
+  uint32_t v = T0TC / 64 * 10UL;
+  return (v / (147456UL / 4UL)) * 64;
 }
 #define MAX_TS ((0xFFFFFFFFUL*10UL)/(147456UL / 4UL)-1)
+#if MAX_TS != 0x11C71B
+#error Invalid max timestamp value, check overflow
+#endif
 
 uint32_t ts_expired(uint32_t target_ts) {
   uint32_t ts = get_ts();
@@ -640,8 +657,8 @@ void init_state(void) {
   // temps are in decicelsius
   G_state.temps[TEMP_DELTASTARTTOP] = 00;
   G_state.temps[TEMP_DELTASTOPTOP] = 00;
-  G_state.temps[TEMP_DELTASTARTBOT] = 80;
-  G_state.temps[TEMP_DELTASTOPBOT] = 30;
+  G_state.temps[TEMP_DELTASTARTBOT] = 120;
+  G_state.temps[TEMP_DELTASTOPBOT] = 40;
   G_state.temps[TEMP_MAX] = 700;
   G_state.temps[TEMP_MIN] = 200;
   G_state.temps[TEMP_VERSION] = VERSION;
@@ -698,6 +715,17 @@ void process(void) {
   if (ts_expired(G_state.ts_display)) {
     screen_repaint();
     G_state.ts_display = (get_ts() + TIMEOUT_DISPLAY_ANIMATE_MS)%MAX_TS;
+  }
+
+  if (ts_expired(G_state.ts_output_next)) {
+    G_state.ts_output_next = (get_ts() + TIMEOUT_OUTPUT)%MAX_TS;
+    output_uart(0xAA);
+    output_uart(0x55);
+    output_uart(0x01); // encoding format
+    output_uart(G_state.temps[TEMP_PANEL]);
+    output_uart(G_state.temps[TEMP_TOP]);
+    output_uart(G_state.temps[TEMP_BOTTOM]);
+    output_uart(G_state.pump_state);
   }
 }
 

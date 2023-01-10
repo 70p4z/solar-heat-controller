@@ -38,3 +38,14 @@
 #define BUTTON_SET_PIN 5
 #define BUTTON_DOWN_PORT 0
 #define BUTTON_DOWN_PIN 4
+
+#define UART0_TX_PORT 0
+#define UART0_TX_PIN 0
+#define UART0_RX_PORT 0
+#define UART0_RX_PIN 1
+
+// TODO
+#define I2C_SCL_PORT 0
+#define I2C_SCL_PIN 2
+#define I2C_SDA_PORT 0
+#define I2C_SDA_PIN 3
