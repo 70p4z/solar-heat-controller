@@ -102,7 +102,7 @@ Two connectors are available:
  * Ground P0.14
  * Powercycle
  * Unpin P0.14 from the ground, the LCD shall remain blank, as the LPC bootloader does not drive it.
- * Run lpc21isp
+ * Run lpc21isp (tested with https://github.com/Senseg/lpc21isp.git reference 86c3296001d5a3b0b447f0e0fde9ee0825919257)
  * Profit
 
 ### Temperature measurement puzzle
