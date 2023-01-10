@@ -76,12 +76,34 @@ But resoldering the driver was not a success. The screen was non functional :(. 
 
 First step toward firmware rewrite, the big flashing test! 
 
-Tracing debug ports of the PCB to MCU PIN wasn't that of a hassle. Only a simple tester (again), a paper, a pen, the MCU PIN description and few minutes.
+Tracing debug ports of the PCB to MCU PIN wasn't that of a hassle. Only a simple tester (again), a paper, a pen, the MCU PIN descriptions and few minutes.
 
 Two connectors are available: 
 
- * a JTAG port, with the same PIN ordering than the 20 pin ARM jTAG connector. 
- * an ISP port, with P0.14, RST, TXD, RXD, VCC and GND. The system's ISP bootloader can be enable at reset when P0.14 is grounded.  
+ * a JTAG port, with the same PIN ordering than the 20 pin ARM jTAG connector on the PCB, without headers 
+ * an ISP port, with P0.14, RST, TXD, RXD, VCC and GND. The system's ISP bootloader is reenabled at reset when P0.14 is grounded.  
+
+               ^
+  LCD screen  /
+
+        +---+---+
+ P0.14  | . | . | Vcc
+        +---+---+
+  nRST  | . | . | RXD0
+        +---+---+
+  TXD0  | . | . | GND
+        +---+---+
+
+  On PCB battery |
+                 v
+
+#### Flashing procedure
+
+ * Ground P0.14
+ * Powercycle
+ * Unpin P0.14 from the ground, the LCD shall remain blank, as the LPC bootloader does not drive it.
+ * Run lpc21isp
+ * Profit
 
 ### Temperature measurement puzzle
 
