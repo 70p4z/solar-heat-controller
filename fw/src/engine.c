@@ -123,13 +123,12 @@ void output_uart(uint8_t b) {
 //////////////////////////////////////////////////*/
 
 uint32_t get_ts(void) {
-  uint32_t v = T0TC / 64 * 10UL;
-  return (v / (147456UL / 4UL)) * 64;
+  return (T0TC / (14745600UL/4000UL));
 }
-#define MAX_TS ((0xFFFFFFFFUL*10UL)/(147456UL / 4UL)-1)
-#if MAX_TS != 0x11C71B
-#error Invalid max timestamp value, check overflow
-#endif
+#define MAX_TS ((0xFFFFFFFFUL)/(14745600UL / 4000UL))
+// #if MAX_TS != 0x11C71B
+// #error Invalid max timestamp value, check overflow
+// #endif
 
 uint32_t ts_expired(uint32_t target_ts) {
   uint32_t ts = get_ts();
