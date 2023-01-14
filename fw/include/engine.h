@@ -50,8 +50,12 @@ typedef struct {
   uint32_t ts_display; // timeout for next screen animation
   uint8_t ht1621b_ram[(32*4)/8];
 
-  #define TIMEOUT_OUTPUT 1000000
+  #define TIMEOUT_OUTPUT 1000
   uint32_t ts_output_next;
+
+  // no button interp below a debounce period
+  #define TIMEOUT_NEXT_BUTTON 100
+  uint32_t ts_next_button;
 
   uint8_t pump_state;
 } state_t;

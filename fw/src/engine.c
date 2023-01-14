@@ -53,7 +53,7 @@ void init_hw (void) {
 ///                                               */
 //////////////////////////////////////////////////*/
 
-void gpio_out(uint8_t port, uint8_t pin, uint32_t state) {
+__attribute__((noinline)) void gpio_out(uint8_t port, uint8_t pin, uint32_t state) {
   switch(port) {
     case 0:
       if (state) {
@@ -71,7 +71,18 @@ void gpio_out(uint8_t port, uint8_t pin, uint32_t state) {
       break;
   }
 }
-uint32_t gpio_in(uint8_t port, uint8_t pin) {
+
+void delay_cycles(uint32_t cycles) {
+  cycles /= 2;
+  asm volatile(
+    "loop%=:; "
+    "sub %[cycles], %[cycles], #1;"
+    "bne loop%="
+    :[cycles] "+r" (cycles)
+  );
+}
+
+__attribute__((noinline)) uint32_t gpio_in(uint8_t port, uint8_t pin) {
   switch(port) {
     case 0:
       return (FIO0PIN & (1<<pin)) ? ON:OFF;
@@ -81,7 +92,7 @@ uint32_t gpio_in(uint8_t port, uint8_t pin) {
   return 0;
 }
 
-void debug_uart(uint8_t b) {
+__attribute__((noinline)) void debug_uart(uint8_t b) {
   uint8_t bits=2+8+2;
   uint32_t _in;
   FIO0DIR |= (1<<14);
@@ -91,11 +102,11 @@ void debug_uart(uint8_t b) {
   while(bits--) {
     gpio_out(0, 14, _in&1); 
     _in>>=1;
-    {volatile uint32_t i = 0x100 ; while(i--);}
+    delay_cycles(256);
   }
 }
 
-void output_uart(uint8_t b) {
+__attribute__((noinline)) void output_uart(uint8_t b) {
   uint8_t bits=2+8+2;
   uint32_t _in;
   FIO0DIR |= (1<<0);
@@ -105,7 +116,7 @@ void output_uart(uint8_t b) {
   while(bits--) {
     gpio_out(0, 0, _in&1); 
     _in>>=1;
-    {volatile uint32_t i = 0x100 ; while(i--);}
+    delay_cycles(50);
   }
 }
 
@@ -662,6 +673,8 @@ void init_state(void) {
   G_state.temps[TEMP_MIN] = 200;
   G_state.temps[TEMP_VERSION] = VERSION;
 
+  G_state.ts_output_next = (get_ts() + TIMEOUT_OUTPUT)%MAX_TS;
+
   // start with pump OFF!
   pump(OFF);
 }
@@ -670,15 +683,21 @@ void process(void) {
   uint32_t idx;
 
   // handle button press
-  for (idx=0; idx < BUTTON_COUNT; idx++) {
-    uint8_t buttonstate = read_button(idx);
-    if (buttonstate == ON) {
-      if (G_state.last_buttons[idx] == OFF) {
-        backlight_on();
-        button_action(idx);
+  if (G_state.ts_next_button == 0) {
+    for (idx=0; idx < BUTTON_COUNT; idx++) {
+      uint8_t buttonstate = read_button(idx);
+      if (buttonstate == ON) {
+        if (G_state.last_buttons[idx] == OFF) {
+          backlight_on();
+          button_action(idx);
+          G_state.ts_next_button = (get_ts() + TIMEOUT_NEXT_BUTTON)%MAX_TS;
+        }
       }
+      G_state.last_buttons[idx] = buttonstate;
     }
-    G_state.last_buttons[idx] = buttonstate;
+  }
+  else if (ts_expired(G_state.ts_next_button)) {
+    G_state.ts_next_button = 0;
   }
 
   switch(G_state.temp_state) {
@@ -720,12 +739,41 @@ void process(void) {
     G_state.ts_output_next = (get_ts() + TIMEOUT_OUTPUT)%MAX_TS;
     output_uart(0xAA);
     output_uart(0x55);
+    output_uart(0x0B); // total length
     output_uart(0x01); // encoding format
+    output_uart(G_state.temps[TEMP_PANEL]>>8);
     output_uart(G_state.temps[TEMP_PANEL]);
+    output_uart(G_state.temps[TEMP_TOP]>>8);
     output_uart(G_state.temps[TEMP_TOP]);
+    output_uart(G_state.temps[TEMP_BOTTOM]>>8);
     output_uart(G_state.temps[TEMP_BOTTOM]);
     output_uart(G_state.pump_state);
   }
+#ifdef DEBUG_TIME
+  else {
+    output_uart(0xDD);
+    output_uart(0x55);
+    output_uart(0x08); // total length
+    uint32_t ts = get_ts();
+    output_uart(ts>>24);
+    output_uart(ts>>16);
+    output_uart(ts>>8);
+    output_uart(ts>>0);
+    output_uart(G_state.ts_output_next>>24);
+    output_uart(G_state.ts_output_next>>16);
+    output_uart(G_state.ts_output_next>>8);
+    output_uart(G_state.ts_output_next>>0);
+  }
+
+  output_uart(0xAA);
+  output_uart(0x55);
+  output_uart(0x06); // total length
+  uint32_t ts = get_ts();
+  output_uart(ts>>24);
+  output_uart(ts>>16);
+  output_uart(ts>>8);
+  output_uart(ts>>0);
+#endif // DEBUG_TIME
 }
 
 int main(void) {
