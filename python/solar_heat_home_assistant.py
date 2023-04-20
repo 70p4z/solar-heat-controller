@@ -35,7 +35,7 @@ def home_assistant_push(ident, name, value, unit=None):
 
 
 # read values from the solax
-while True:
+while True: 
   try:
     data=b''
     while True:
@@ -65,3 +65,22 @@ while True:
     print(traceback.print_exc())
     sys.exit(-1)
   #time.sleep(0.1)#sys stdin is done wit ha timeout
+
+'''
+/etc/rc.local
+screen -dmS diemasol bash -c 'cd /automeshion/ ; bash solar_heat.sh' &
+
+/automeshion/solar_heat.sh
+#!/bin/bash
+# ttyAMA0 on pin GPIO14 GPIO15
+raspi-gpio set 14 a0
+raspi-gpio set 15 a0
+raspi-gpio set 32 ip
+raspi-gpio set 33 ip
+sleep 1
+while [ true ]
+do
+        socat /dev/ttyAMA0,raw,echo=0,nonblock,min=0,b115200 STDIO | python3 solar_heat_home_assistant.py
+        sleep 1
+done
+'''

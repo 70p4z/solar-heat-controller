@@ -3,7 +3,7 @@
 
 # CFLAGS = -Wall -nostdlib -nostartfiles -ffreestanding 
 
-DEFINES += VERSION=110
+DEFINES += VERSION=120
 DEFINES += DEBUG
 
 # Cortex-M4

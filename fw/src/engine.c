@@ -4,6 +4,9 @@
 
 state_t G_state;
 
+#define HW_UART0
+#define XTAL_HZ 14745600UL
+
 ////////////////////////////////////////////////////////////////////////////////*/
 ///                                                                             */
 ///     ▄▄    ▄▄ ▄▄      ▄▄            ▄▄▄▄▄▄   ▄▄▄   ▄▄   ▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄    */
@@ -19,11 +22,12 @@ state_t G_state;
 void init_hw (void) {
   MAMTIM = 1;
   MAMCR = 1;
+  // APB is 1/4 CCLK (XTAL)
   VPBDIV = 0; 
   SCS = 3; 
   PINSEL0 = 0x0;
   PINSEL1 = 0x0;
-  PINSEL2 = 0x4;
+  PINSEL2 = 0x4; // trace port on P26
   //            TDI TCK
   // 3 12 13 16 28  29
   FIO0SET = 0x30013008;
@@ -35,10 +39,61 @@ void init_hw (void) {
   FIO0DIR = 0x762F9C0C;
   FIO1PIN = 0;
   FIO1DIR = 0x03FF0000;
-  PCONP = 2; // enable PCTIM0
+
+  PCONP = 1<<1; // enable PCTIM0
   T0CTCR = 0; // PCLK counter
   T0TCR = 1; // start TIM0
+
+  #ifdef HW_UART0
+  // setup uart0
+  PCONP |= (1<<3);
+  U0LCR |= 1<<7; // DLAB=1
+  // bitrate  = 115200 with XTAL and APB div 4
+  U0DLL = 2;
+  U0DLM = 0;
+  U0LCR &= ~(1<<7); // DLAB=0
+  U0LCR = (0x3<<0);
+  // fifo enable
+  U0FCR = (1<<0) | (1<<1) | (1<<2);
+
+  // map pins
+  PINSEL0 = (PINSEL0&~0xF) | 0x5; // UART0.TXD UART0.RXD
+  #endif // HW_UART0
 }
+
+#ifdef HW_UART0
+//////////////////////////////////////////////////////////////////////*/
+///                                                                   */
+///       ▄▄▄▄    ▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄     ▄▄▄▄▄▄      ▄▄     ▄▄          */
+///     ▄█▀▀▀▀█   ██▀▀▀▀▀▀  ██▀▀▀▀██   ▀▀██▀▀     ████    ██          */
+///     ██▄       ██        ██    ██     ██       ████    ██          */
+///      ▀████▄   ███████   ███████      ██      ██  ██   ██          */
+///          ▀██  ██        ██  ▀██▄     ██      ██████   ██          */
+///     █▄▄▄▄▄█▀  ██▄▄▄▄▄▄  ██    ██   ▄▄██▄▄   ▄██  ██▄  ██▄▄▄▄▄▄    */
+///      ▀▀▀▀▀    ▀▀▀▀▀▀▀▀  ▀▀    ▀▀▀  ▀▀▀▀▀▀   ▀▀    ▀▀  ▀▀▀▀▀▀▀▀    */
+///                                                                   */
+///                                                                   */
+//////////////////////////////////////////////////////////////////////*/
+void uart_tx(uint8_t* buf, size_t len) {
+  while(len--) {
+    // until THRE
+    while (!(U0LSR & (1<<5)));
+    U0THR = *buf++;
+  }
+}
+
+size_t uart_avail(void) {
+  // RDR not filled
+  if (!(U0LSR & (1<<0))) {
+    return 0;
+  }
+  return 1; // at least one byte available to read
+}
+
+uint8_t uart_rx(void) {
+  return U0RBR;
+}
+#endif // HW_UART0
 
 //////////////////////////////////////////////////*/
 ///                                               */
@@ -107,6 +162,7 @@ __attribute__((noinline)) void debug_uart(uint8_t b) {
 }
 
 __attribute__((noinline)) void output_uart(uint8_t b) {
+#ifndef HW_UART0
   uint8_t bits=2+8+2;
   uint32_t _in;
   FIO0DIR |= (1<<0);
@@ -118,6 +174,9 @@ __attribute__((noinline)) void output_uart(uint8_t b) {
     _in>>=1;
     delay_cycles(50);
   }
+#else // HW_UART0
+  uart_tx(&b, 1);
+#endif // HW_UART0
 }
 
 //////////////////////////////////////////////////*/
@@ -134,9 +193,11 @@ __attribute__((noinline)) void output_uart(uint8_t b) {
 //////////////////////////////////////////////////*/
 
 uint32_t get_ts(void) {
-  return (T0TC / (14745600UL/4000UL));
+  // /4 => 4 cycles of quartz for 1 cycles of the timer
+  // /1000 to tick each millisecond
+  return (T0TC / (XTAL_HZ/4/1000UL));
 }
-#define MAX_TS ((0xFFFFFFFFUL)/(14745600UL / 4000UL))
+#define MAX_TS ((0xFFFFFFFFUL)/(XTAL_HZ / 4 / 1000UL))
 // #if MAX_TS != 0x11C71B
 // #error Invalid max timestamp value, check overflow
 // #endif
@@ -344,6 +405,7 @@ char* const U_display_titles[TEMP_COUNT] = {
 void screen_repaint(void) {
   uint32_t flag;
   uint8_t temp_idx = (G_state.display_state & ~DISPLAY_FLAG_EDIT);
+  // disable every segments
   screen_blank();
 #ifdef DEBUG_SEGMENTS
   // set a single segment
@@ -352,13 +414,20 @@ void screen_repaint(void) {
   // display screen segments
   screen_flag(FLAG_TANKANDPANEL);
   G_state.blink_flags &= ~ ((1<<FLAG_TEMPPANEL)|(1<<FLAG_TEMPTOP)|(1<<FLAG_TEMPBOT)|(1<<FLAG_WARNING));
+  // alert when some temps are unknown (measure problem)
   if (G_state.temps[TEMP_PANEL] == TEMP_UNDEF
     || G_state.temps[TEMP_BOTTOM] == TEMP_UNDEF) {
     G_state.blink_flags |= (1<<FLAG_WARNING);
   }
+  // frost?
   if (G_state.temps[TEMP_PANEL] < 0) {
     screen_flag(FLAG_FROST);
   }
+  // disabled pumping?
+  if (G_state.pump_disabled) {
+    screen_flag(FLAG_PAUSE);
+  }
+  // display indicator for the value displayed
   switch(temp_idx) {
     case TEMP_PANEL:
       G_state.blink_flags |= (1<<FLAG_TEMPPANEL);
@@ -401,10 +470,12 @@ void screen_repaint(void) {
       screen_flag(FLAG_CELSIUS);
       break;
   }
+  // display the strings/value
   if (temp_idx <= TEMP_COUNT - 1) {
     screen_string(U_display_titles[temp_idx]);
     screen_number1decimal(G_state.temps[temp_idx]);
   }
+  // handle blinking flags
   for (flag=0;flag<32;flag++) {
     if (G_state.blink_flags & (1<<flag)) {
       if (G_state.blink_flags_state & (1<<flag)) {
@@ -566,7 +637,7 @@ int16_t temp_read(void) {
   // 2000*0x8000*((0xB036-0x8000)/0x8000)/(0x8000-0x8000*((0xB036-0x8000)/0x8000))
   // 2000*((0xB036-0x8000))/(0x8000-((0xB036-0x8000)))
   // 2000*(0xB036-0x8000)/(0x10000-0xB036)
-  uint16_t Rpt1k = 2000UL * ((uint32_t)(Upt1k - 0x8000UL)) / ((uint32_t)( 0x10000UL - Upt1k )) * 10;
+  uint16_t Rpt1k = 2000UL * ((uint32_t)(Upt1k - 0x8000UL)) * 10 / ((uint32_t)( 0x10000UL - Upt1k )) ;
 
   // interpolation of Rpt1k in the pt1000 table
   uint32_t idx = 0;
@@ -597,6 +668,12 @@ int16_t temp_read(void) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 void temp_action(void) {
+
+  if (G_state.pump_disabled) {
+    pump(OFF);
+    return;
+  }
+
   // invalid temp? safety first, disable and notify
   if (G_state.temps[TEMP_PANEL] == TEMP_UNDEF
     || G_state.temps[TEMP_BOTTOM] == TEMP_UNDEF) {
@@ -675,6 +752,8 @@ void init_state(void) {
 
   G_state.ts_output_next = (get_ts() + TIMEOUT_OUTPUT)%MAX_TS;
 
+  // start with pump regulation enabled
+  G_state.pump_disabled = 0;
   // start with pump OFF!
   pump(OFF);
 }
@@ -730,6 +809,7 @@ void process(void) {
     backlight(OFF);
   }
 
+  // screen redraw
   if (ts_expired(G_state.ts_display)) {
     screen_repaint();
     G_state.ts_display = (get_ts() + TIMEOUT_DISPLAY_ANIMATE_MS)%MAX_TS;
@@ -748,6 +828,19 @@ void process(void) {
     output_uart(G_state.temps[TEMP_BOTTOM]>>8);
     output_uart(G_state.temps[TEMP_BOTTOM]);
     output_uart(G_state.pump_state);
+  }
+
+  if (uart_avail()) {
+    switch(uart_rx()) {
+    case 0xDE:
+      // force disable auto pump
+      G_state.pump_disabled = 1;
+      break;
+    case 0xEA:
+      // reenable auto pump
+      G_state.pump_disabled = 0;
+      break;
+    }
   }
 #ifdef DEBUG_TIME
   else {

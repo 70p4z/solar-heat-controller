@@ -58,6 +58,7 @@ typedef struct {
   uint32_t ts_next_button;
 
   uint8_t pump_state;
+  uint8_t pump_disabled;
 } state_t;
 
 extern state_t G_state;
