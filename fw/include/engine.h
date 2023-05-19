@@ -41,6 +41,9 @@ typedef struct {
   uint8_t temps_change; // mark changes in the temps buffer
   uint8_t temp_state;
 
+  // hysterisis value to avoid pump drive flickering when bottom max temp is reached
+  #define TEMP_MAX_HYSTERISIS_SUB 15 
+
   #define DISPLAY_FLAG_EDIT 0x80
   uint8_t display_state; // 0xYZ (Z is the text and temp ref, Y is the editing mode)
   uint32_t fixed_flags; // requested flags to display

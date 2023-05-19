@@ -697,7 +697,9 @@ void temp_action(void) {
         pump(OFF);
       }
       // panel - bottom >= deltastart
-      else if (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] >= G_state.temps[TEMP_DELTASTARTBOT]) {
+      // && hysterisis to avoid flickering of when bottom reaches the max temp
+      else if (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] >= G_state.temps[TEMP_DELTASTARTBOT]
+        && G_state.temps[TEMP_BOTTOM] < G_state.temps[TEMP_MAX] - TEMP_MAX_HYSTERISIS_SUB) {
         pump(ON);
       }
     }
@@ -714,8 +716,10 @@ void temp_action(void) {
       }
       // panel - bottom >= deltastart
       // && panel - top >= deltastart
+      // && hysterisis to avoid flickering of when bottom reaches the max temp
       else if (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] >= G_state.temps[TEMP_DELTASTARTBOT]
-        && G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_TOP] >= G_state.temps[TEMP_DELTASTARTTOP]) {
+        && G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_TOP] >= G_state.temps[TEMP_DELTASTARTTOP]
+        && G_state.temps[TEMP_BOTTOM] < G_state.temps[TEMP_MAX] - TEMP_MAX_HYSTERISIS_SUB) {
         pump(ON);
       }
     }
