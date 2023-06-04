@@ -31,7 +31,7 @@ TARGET := arm-none-eabi-
 
 
 CFLAGS += $(addprefix -D,$(DEFINES)) $(addprefix -I,$(INCLUDE_PATH)) -std=gnu11 -g3
-CFLAGS += -O3 -ffunction-sections -fdata-sections -Wall -fomit-frame-pointer -fstack-usage -MMD -MP
+CFLAGS += -Os -ffunction-sections -fdata-sections -Wall -fomit-frame-pointer -fstack-usage -MMD -MP
 CFLAGS += $(CPUFLAGS)
 
 LDFLAGS += -Tlpc2138.ld

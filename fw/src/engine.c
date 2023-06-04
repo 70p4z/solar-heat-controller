@@ -708,6 +708,7 @@ void temp_action(void) {
       if (
         // tank is upside down?
         G_state.temps[TEMP_BOTTOM] >= G_state.temps[TEMP_TOP]
+        || G_state.temps[TEMP_TOP] > 950 /* avoid boiling point! */
             // deltastop bottom 
         || (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] <= G_state.temps[TEMP_DELTASTOPBOT]
             // and delteastop top
@@ -748,8 +749,8 @@ void init_state(void) {
   // temps are in decicelsius
   G_state.temps[TEMP_DELTASTARTTOP] = 00;
   G_state.temps[TEMP_DELTASTOPTOP] = 00;
-  G_state.temps[TEMP_DELTASTARTBOT] = 120;
-  G_state.temps[TEMP_DELTASTOPBOT] = 40;
+  G_state.temps[TEMP_DELTASTARTBOT] = 150;
+  G_state.temps[TEMP_DELTASTOPBOT] = 50;
   G_state.temps[TEMP_MAX] = 700;
   G_state.temps[TEMP_MIN] = 200;
   G_state.temps[TEMP_VERSION] = VERSION;
