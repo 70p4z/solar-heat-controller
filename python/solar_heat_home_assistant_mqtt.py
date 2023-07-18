@@ -56,7 +56,7 @@ def mqtt_start():
     if rc==0:
       mqtt_setup()
 
-  mqtt_client = mqtt.Client('solar_heat_controller')
+  mqtt_client = mqtt.Client('solar_heat_controller',clean_session=True)
   mqtt_client.on_connect=on_connect
   while True:
     try:
