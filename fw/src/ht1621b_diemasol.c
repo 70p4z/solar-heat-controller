@@ -201,7 +201,7 @@ void screen_update(void) {
   for (wordidx = 0; wordidx < 32 ; wordidx ++) {
     // fetch nibble corresponding to the word
     uint8_t nibble = (G_state.ht1621b_ram[wordidx/2]>>((wordidx%2)*4)) & 0xF;
-    // TODO reverse here ? are bits not in the right endianness
+    // reverse here ? are bits not in the right endianness
     ht1621b_write_LE(nibble, 4);
   }
   gpio_out(DISP_CS_PORT, DISP_CS_PIN, 1);

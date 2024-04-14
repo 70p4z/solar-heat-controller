@@ -42,7 +42,8 @@ typedef struct {
   uint8_t temp_state;
 
   // hysterisis value to avoid pump drive flickering when bottom max temp is reached
-  #define TEMP_MAX_HYSTERISIS_SUB 15 
+  #define TEMP_MAX_HYSTERISIS_SUB 15 // in 0.1°C 
+  #define TEMP_TOP_ABSOLUTE_MAX 850 // in 0.1°C
 
   #define DISPLAY_FLAG_EDIT 0x80
   uint8_t display_state; // 0xYZ (Z is the text and temp ref, Y is the editing mode)
@@ -62,6 +63,8 @@ typedef struct {
 
   uint8_t pump_state;
   uint8_t pump_disabled;
+
+  uint8_t force_enable;
 } state_t;
 
 extern state_t G_state;

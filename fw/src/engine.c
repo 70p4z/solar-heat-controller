@@ -427,6 +427,9 @@ void screen_repaint(void) {
   if (G_state.pump_disabled) {
     screen_flag(FLAG_PAUSE);
   }
+  if (G_state.force_enable) {
+    screen_flag(FLAG_RUN);
+  }
   // display indicator for the value displayed
   switch(temp_idx) {
     case TEMP_PANEL:
@@ -603,13 +606,6 @@ vcc=3.178v
 */
 
 int16_t temp_read(void) {
-  // if(G_state.fixed_flags & FLAG_RUN) {
-  //   G_state.fixed_flags &= ~FLAG_RUN;
-  // }
-  // else {
-  //   G_state.fixed_flags |= FLAG_RUN;
-  // }
-
   // read from ADC LSB is 76uV
   temp_exchange_byte(0x38);
   // substract half the span of the ADC ([-Vref;+Vref])
@@ -674,6 +670,11 @@ void temp_action(void) {
     return;
   }
 
+  if (G_state.force_enable) {
+    pump(ON);
+    return;
+  }
+
   // invalid temp? safety first, disable and notify
   if (G_state.temps[TEMP_PANEL] == TEMP_UNDEF
     || G_state.temps[TEMP_BOTTOM] == TEMP_UNDEF) {
@@ -708,7 +709,7 @@ void temp_action(void) {
       if (
         // tank is upside down?
         G_state.temps[TEMP_BOTTOM] >= G_state.temps[TEMP_TOP]
-        || G_state.temps[TEMP_TOP] > 950 /* avoid boiling point! */
+        || G_state.temps[TEMP_TOP] >= TEMP_TOP_ABSOLUTE_MAX /* avoid boiling point! */
             // deltastop bottom 
         || (G_state.temps[TEMP_PANEL] - G_state.temps[TEMP_BOTTOM] <= G_state.temps[TEMP_DELTASTOPBOT]
             // and delteastop top
@@ -747,18 +748,19 @@ void temp_action(void) {
 void init_state(void) {
   memset(&G_state, 0, sizeof(G_state));
   // temps are in decicelsius
-  G_state.temps[TEMP_DELTASTARTTOP] = 00;
-  G_state.temps[TEMP_DELTASTOPTOP] = 00;
+  G_state.temps[TEMP_DELTASTARTTOP] = 0;
+  G_state.temps[TEMP_DELTASTOPTOP] = 0;
   G_state.temps[TEMP_DELTASTARTBOT] = 150;
   G_state.temps[TEMP_DELTASTOPBOT] = 50;
-  G_state.temps[TEMP_MAX] = 700;
-  G_state.temps[TEMP_MIN] = 200;
+  G_state.temps[TEMP_MAX] = 700; // bottom tank max temp
+  G_state.temps[TEMP_MIN] = 500; // panel min temp
   G_state.temps[TEMP_VERSION] = VERSION;
 
   G_state.ts_output_next = (get_ts() + TIMEOUT_OUTPUT)%MAX_TS;
 
   // start with pump regulation enabled
   G_state.pump_disabled = 0;
+  G_state.force_enable = 0;
   // start with pump OFF!
   pump(OFF);
 }
@@ -844,6 +846,12 @@ void process(void) {
     case 0xEA:
       // reenable auto pump
       G_state.pump_disabled = 0;
+      break;
+    case 0xC9:
+      G_state.force_enable = 1;
+      break;
+    case 0xB6:
+      G_state.force_enable = 0;
       break;
     }
   }
