@@ -681,7 +681,7 @@ void temp_action(void) {
     pump(OFF);
   }
   // don't pump if panel temp is too low, whatever the storage temperature
-  else if (G_state.temps[TEMP_PANEL] <= G_state.temps[TEMP_MIN]) {
+  else if (G_state.temps[TEMP_PANEL] <= G_state.temps[TEMP_MIN] - TEMP_MAX_HYSTERISIS_SUB) {
     pump(OFF);
   }
   // when temperature reached the maximum (safety) 
