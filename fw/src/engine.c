@@ -750,10 +750,10 @@ void init_state(void) {
   // temps are in decicelsius
   G_state.temps[TEMP_DELTASTARTTOP] = 0;
   G_state.temps[TEMP_DELTASTOPTOP] = 0;
-  G_state.temps[TEMP_DELTASTARTBOT] = 150;
-  G_state.temps[TEMP_DELTASTOPBOT] = 50;
-  G_state.temps[TEMP_MAX] = 700; // bottom tank max temp
-  G_state.temps[TEMP_MIN] = 500; // panel min temp
+  G_state.temps[TEMP_DELTASTARTBOT] = 5*10;
+  G_state.temps[TEMP_DELTASTOPBOT] = 2*10;
+  G_state.temps[TEMP_MAX] = 85*10; // bottom tank max temp to stop the pump
+  G_state.temps[TEMP_MIN] = 35*10; // panel min temp to start the pump
   G_state.temps[TEMP_VERSION] = VERSION;
 
   G_state.ts_output_next = (get_ts() + TIMEOUT_OUTPUT)%MAX_TS;
