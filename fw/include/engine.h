@@ -58,7 +58,7 @@ typedef struct {
   uint32_t ts_output_next;
 
   // no button interp below a debounce period
-  #define TIMEOUT_NEXT_BUTTON 100
+  #define TIMEOUT_NEXT_BUTTON 25
   uint32_t ts_next_button;
 
   uint8_t pump_state;

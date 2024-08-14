@@ -779,6 +779,11 @@ void process(void) {
           G_state.ts_next_button = (get_ts() + TIMEOUT_NEXT_BUTTON)%MAX_TS;
         }
       }
+      else {
+        if (G_state.last_buttons[idx] == ON) {
+          G_state.ts_next_button = (get_ts() + TIMEOUT_NEXT_BUTTON)%MAX_TS;
+        }
+      }
       G_state.last_buttons[idx] = buttonstate;
     }
   }
