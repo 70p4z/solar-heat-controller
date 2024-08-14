@@ -70,6 +70,12 @@ $(BUILD_DIR)/%.o: %.c Makefile | prepare
 $(BUILD_DIR)/%.o: %.s Makefile | prepare
 	$(TARGET)gcc -o "$@" "$<" -c $(CFLAGS) -MT"$@" -MF"$(@:%.o=%.d)" 
 
-load: all
-	../lpc21isp/lpc21isp -wipe -verify $(BUILD_DIR)/hex  /dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A600JLJ7-if00-port0 115200 14745
+../lpc21isp/lpc21isp: 
+	( cd .. && git clone https://github.com/Senseg/lpc21isp.git && cd lpc21isp && make -j )
+
+#/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A600JLJ7-if00-port0
+SERIAL=$(shell ls /dev/serial/by-id/* | head -n1)
+load: all ../lpc21isp/lpc21isp
+	@echo Using serial device: $(SERIAL)
+	../lpc21isp/lpc21isp -wipe -verify $(BUILD_DIR)/hex $(SERIAL) 115200 14745
 	
